@@ -1,0 +1,14 @@
+{
+  "name": "node-s3-proxy",
+  "description": "Proxies file uploads to S3",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "knox": "0.3.0",
+    "express": "3.x",
+    "config": "0.4.16",
+    "socket.io": "0.9.11",
+    "formidable": "~1.0.11",
+    "mime": "~1.2.7"
+  }
+}

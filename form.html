@@ -1,0 +1,89 @@
+<!doctype html>
+
+<p data-upload-status>
+	Connecting...
+</p>
+
+<form target="uploader" action="/upload" method="POST" enctype="multipart/form-data" data-upload-form>
+	<input type="file" name="data" disabled="disabled" />
+	<input type="button" value="Upload" disabled="disabled" />
+</form>
+
+<pre data-upload-progress></pre>
+
+<ul data-upload-uploaded-files></ul>
+
+<iframe name="uploader" src="" style="display:none;"></iframe>
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(function() {
+	var socket   = io.connect('localhost');
+
+	var	form     = $('[data-upload-form]')
+	 ,  status   = $('[data-upload-status]')
+	 ,  progress = $('[data-upload-progress]')
+	 ,  uploads  = $('[data-upload-uploaded-files]')
+	 ,  input    = form.find('input[type="file"]')
+	 ,  button   = form.find('input[type="button"]');
+
+	socket.on('connect', function() {
+		input.attr('disabled', false);
+		status.text('Waiting for file...');
+	});
+
+	var filename;
+	input.on('change', function() {
+		filename = input.val().split('\\').pop();
+
+		button.attr('disabled', false);
+		status.text('Ready to upload "' + filename + '"');
+	});
+
+	button.on('click', function() {
+		socket.emit('upload:register');
+		socket.on('upload:registered', function(data) {
+			var qs = ['upload_id=' + data.id, 'upload_filename=' + filename];
+
+			if('files' in input[0]) {
+				qs.push('content_length=' + input[0].files[0].size);
+			}
+
+			form.attr('action', form.attr('action') + '?' + qs.join('&'));
+			form.submit();
+			status.text('Now uploading "' + filename + '"');
+			input.attr('disabled', true);
+			button.attr('disabled', true);
+		});
+	});
+
+	socket.on('upload:progress', function(data) {
+		progress.text(JSON.stringify(data));
+	});
+
+	socket.on('upload:complete', function(data) {
+		var li = $('<li />')
+		 ,  a  = $('<a />');
+	
+		a.attr('href', '//' + data.url)
+		 .text(data.filename)
+		 .appendTo(li);
+
+		uploads.append(li);
+		input.attr('disabled', false);
+		status.text('Waiting for file...');
+	});
+
+	socket.on('upload:error', function(data) {
+		status.text('Upload error [' + data.code + '].');
+		console.log(data);
+	});
+
+	socket.on('disconnect', function() {
+		input.attr('disabled', true);
+		button.attr('disabled', true);
+		status.text('Connection lost.');
+	});
+})();
+</script>
